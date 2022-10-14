@@ -1,5 +1,5 @@
 
-
+--setup is very simple
 select * from Environment
 select * from Purpose
 select PurposeName
@@ -8,22 +8,29 @@ select PurposeName
 		,BlockedProcessEvents
 		,DeadlockEvents
 		,ErrorEvents
+		,LongQueryEvents
 		,BackupFolder
 		,IsActive 
 	from vwServers
 
 exec spLoad
+exec spLoadIndexFragmentation
 
 --Environment data
---select * from vwClusterNodes
+select * from vwClusterNodes
 select * from vwServers
+select * from vwVolumes
+select * from vwLogins
+select * from vwServices
+
+--Databases
 select * from vwDatabases
 select * from vwDatabaseFiles
 
 --Schema
 select * from vwDatabaseObjects
 select * from vwDatabaseObjectColumns
-select * from [dbo].[vwSequenses]
+--select * from [dbo].[vwSequenses]
 
 --Performance
 select * from vwMissingIndexes
@@ -31,15 +38,10 @@ select * from vwIndexUsage order by size_mbs desc
 select * from vwTopSql
 select * from vwTopWait
 
---Audit
-select * from vwLogins
-select * from vwServices
-select * from vwVolumes
-
 --Jobs
 select * from vwJobs
 select * from vwJobSteps
-select * from vwJobErrors
+select * from vwJobHistory
 
 --Backups
 select * from vwBackups
@@ -50,11 +52,42 @@ select * from vwErrors
 select * from vwDeadlocks
 select * from vwLongSql
 
-
-
+select * from RplImportLog
 
 /*
 Utilities:
+--Index Maintenance
+	select Maintenance, ServerName
+		, DatabaseName
+		, TableName
+		, IndexName
+		, index_type_desc
+		, avg_fragmentation_in_percent
+		, fragment_count
+		, page_count
+		, SchemaName
+		, RowCount_S
+		, index_type
+		, is_unique
+		, size_mbs
+		, writes
+		, reads
+		, fill_factor
+		, cols
+		, included
+		, filter_definition
+		, object_type
+	from [vwIndexFragmentation]
+	where size_mbs>10 
+	and avg_fragmentation_in_percent > 0.1
+	order by avg_fragmentation_in_percent desc
+
+--History Tracking
+	select * from [dbo].[ServersHist]  order by servername, date desc
+	select * from [dbo].[VolumesHist]  order by servername, volume_mount_point date desc
+	select * from [dbo].[DatabasesHist]  order by servername, databasename, date desc
+	select * from [dbo].[DatabaseFilesHist] order by servername, databasename, filename, date desc
+
 •	spDailyChecks
 Runs dozens of routine checks, worth to check it every morning.
 
@@ -64,10 +97,10 @@ Alerts which require prompt attention
 •	spSearch 'FactProductInventory'
 This may be used to find where tables, routines and columns exist.
 
-•	spStopJob
+•	[dbo].[spJobStop]
 Finds all jobs that start with a given name, stops and disables them. Useful to manage replication or other processes.
 
-•	spJobStart 
+•	 [dbo].[spJobStart]
 Re enables jobs, but does not start them automatically.
 
 •	spAddColumn
@@ -90,7 +123,7 @@ exec spDbCompare @sourceserver='sqlvm1', @sourcedb='AdventureWorks2019Prod', @ta
 
 •	Diagnostics 
 exec spSearchServer 'sqlvm1'
-exec spSearchDatabase 'AdventureWorks2019'
+exec spSearchDatabase 'AdventureWorksDW2019'
 
 •	spRunSql
 Runs a command on servers matching some criteria
@@ -102,9 +135,23 @@ Runs a command on databases matching some criteria
 --where are the gabriels?
 exec [spRunSqlDb] @cmd='select [BusinessEntityID], [PersonType], [FirstName], [LastName] from [#database#].person.person where firstname=''gabriel''', @where='Databasename like ''%adventureworks201_%'''
 
+--Review existing indexes
+select * from vwIndexUsage where table_name='Person' order by servername, databasename, index_name
+
+--	Missing Indexes
+	exec spLoadMissingIndexes
+	select * from vwMissingIndexes
+--farm level analysis
+	select distinct SchemaOnly, TableOnly, equality_columns
+		, sum(unique_compiles) unique_compiles
+		, sum(user_seeks) user_seeks
+		, count(distinct servername) servers
+		, count(distinct servername+'.'+databasename) databases
+	from vwMissingIndexes
+	group by SchemaOnly, TableOnly, equality_columns
 
 •	Masking
---Which columnns are masked
+--Which columnns are masked, switch to mSync demo
 SELECT * FROM vwDatabaseObjectColumns
 where masking_function is not null
 
@@ -114,8 +161,8 @@ where PurposeName <> 'prod'
 
 •	Compression candidates
 select * from vwIndexUSage
-where size_mbs > 10
-and reads < 10
+where size_mbs > 1
+and reads < 100
 and isnull(data_compression_desc,'none') = 'none'
 
 */
