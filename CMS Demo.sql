@@ -18,6 +18,8 @@ exec spLoadIndexFragmentation
 
 --Environment data
 select * from vwClusterNodes
+select * from [dbo].[AvailabilityGroups]
+
 select * from vwServers
 select * from vwVolumes
 select * from vwLogins
@@ -134,6 +136,7 @@ exec [dbo].[spRunSql] @cmd='select * from master..syslogins where sysadmin=1', @
 Runs a command on databases matching some criteria
 --where are the gabriels?
 exec [spRunSqlDb] @cmd='select [BusinessEntityID], [PersonType], [FirstName], [LastName] from [#database#].person.person where firstname=''gabriel''', @where='Databasename like ''%adventureworks201_%'''
+exec [spRunSqlDb] @cmd='select * from [#database#].dbo.DimCustomer where firstname=''gabriel''', @where='Databasename like ''%adventureworksDW201_%'''
 
 --Review existing indexes
 select * from vwIndexUsage where table_name='Person' order by servername, databasename, index_name
