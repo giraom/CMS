@@ -1,4 +1,5 @@
 
+
 --setup is very simple
 select * from Environment
 select * from Purpose
