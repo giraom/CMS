@@ -37,8 +37,12 @@ select * from vwDatabaseObjectColumns
 --Performance
 select * from vwMissingIndexes
 select * from vwIndexUsage order by size_mbs desc
-select * from vwTopSql
-select * from vwTopWait
+select * from vwIndexUsage order by reads desc
+select * from vwIndexUsage order by writes desc
+select * from vwTopSql order by servername, TotalWorkerTime desc
+select * from vwTopWait order by Servername, percent_total_waits desc
+select * from vwQueryStoreLongestAvgTimes order by avg_duration desc
+select * from vwQueryStoreTopExecCounts order by total_execution_count desc
 
 --Jobs
 select * from vwJobs
