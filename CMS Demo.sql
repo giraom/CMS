@@ -15,13 +15,13 @@ select PurposeName
 	from vwServers
 
 exec spLoad
-exec spLoadIndexFragmentation
 
 --Environment data
 select * from vwClusterNodes
 select * from [dbo].[AvailabilityGroups]
 
 select * from vwServers
+select * from LinkedServers
 select * from vwVolumes
 select * from vwLogins
 select * from vwServices
@@ -63,35 +63,10 @@ select * from RplImportLog
 
 /*
 Utilities:
---Index Maintenance
-	select Maintenance, ServerName
-		, DatabaseName
-		, TableName
-		, IndexName
-		, index_type_desc
-		, avg_fragmentation_in_percent
-		, fragment_count
-		, page_count
-		, SchemaName
-		, RowCount_S
-		, index_type
-		, is_unique
-		, size_mbs
-		, writes
-		, reads
-		, fill_factor
-		, cols
-		, included
-		, filter_definition
-		, object_type
-	from [vwIndexFragmentation]
-	where size_mbs>10 
-	and avg_fragmentation_in_percent > 0.1
-	order by avg_fragmentation_in_percent desc
 
 --History Tracking
 	select * from [dbo].[ServersHist]  order by servername, date desc
-	select * from [dbo].[VolumesHist]  order by servername, volume_mount_point date desc
+	select * from [dbo].[VolumesHist]  order by servername, volume_mount_point, date desc
 	select * from [dbo].[DatabasesHist]  order by servername, databasename, date desc
 	select * from [dbo].[DatabaseFilesHist] order by servername, databasename, filename, date desc
 
@@ -149,6 +124,7 @@ select * from vwIndexUsage where table_name='Person' order by servername, databa
 --	Missing Indexes
 	exec spLoadMissingIndexes
 	select * from vwMissingIndexes
+
 --farm level analysis
 	select distinct SchemaOnly, TableOnly, equality_columns
 		, sum(unique_compiles) unique_compiles
@@ -172,6 +148,36 @@ select * from vwIndexUSage
 where size_mbs > 1
 and reads < 100
 and isnull(data_compression_desc,'none') = 'none'
+
+--Index Fragmentation Maintenance
+--separate load proc due to potential long execution time 
+	exec spLoadIndexFragmentation
+
+--Execute maintenance remotely
+	select Maintenance, ServerName
+		, DatabaseName
+		, TableName
+		, IndexName
+		, index_type_desc
+		, avg_fragmentation_in_percent
+		, fragment_count
+		, page_count
+		, SchemaName
+		, RowCount_S
+		, index_type
+		, is_unique
+		, size_mbs
+		, writes
+		, reads
+		, fill_factor
+		, cols
+		, included
+		, filter_definition
+		, object_type
+	from [vwIndexFragmentation]
+	where size_mbs>10 
+	and avg_fragmentation_in_percent > 30
+	order by avg_fragmentation_in_percent desc
 
 */
 
